@@ -820,6 +820,14 @@ function onWatchClick(cve,vendor,btn){
 }
 window._onWatch=onWatchClick;
 
+/* wake up Render free-tier backend on page load so it's ready before login */
+(function pingBackend(){
+  fetch(API+'/health',{method:'GET'}).catch(function(){
+    /* health endpoint may not exist — try root */
+    fetch(API+'/',{method:'GET'}).catch(function(){});
+  });
+})();
+
 /* load saved CVEs if already logged in */
 loadWatchedCVEs();
 
