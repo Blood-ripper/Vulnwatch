@@ -14,6 +14,12 @@ if (!process.env.TURSO_DATABASE_URL) {
   console.error('Fatal: TURSO_DATABASE_URL is not set. Copy .env.example to .env and set it.');
   process.exit(1);
 }
+if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  console.error(
+    'Fatal: GMAIL_USER and GMAIL_APP_PASSWORD must be set (used to email verification codes). See .env.example.'
+  );
+  process.exit(1);
+}
 
 const { init } = require('./db');
 const authRoutes = require('./routes/authRoutes');

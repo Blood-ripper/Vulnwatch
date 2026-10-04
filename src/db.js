@@ -19,13 +19,33 @@ const db = createClient({ url, authToken });
 
 // Create the schema if it doesn't exist. Turso uses the same SQL syntax as
 // SQLite, so these statements are unchanged from the better-sqlite3 version.
+// Add a column to a table only if it isn't already present. Used to upgrade
+// databases created before the email-verification columns existed. Table and
+// column names here are fixed literals (never user input), so interpolating
+// them is safe.
+// Returns true if the column was actually added, false if it already existed.
+async function ensureColumn(table, column, definition) {
+  try {
+    await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+    return true;
+  } catch (err) {
+    if (/duplicate column name/i.test(err.message || '')) {
+      return false;
+    }
+    throw err;
+  }
+}
+
 async function init() {
   await db.executeMultiple(`
     CREATE TABLE IF NOT EXISTS users (
-      id            INTEGER PRIMARY KEY AUTOINCREMENT,
-      email         TEXT NOT NULL UNIQUE,
-      password_hash TEXT NOT NULL,
-      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      email                TEXT NOT NULL UNIQUE,
+      password_hash        TEXT NOT NULL,
+      verified             INTEGER NOT NULL DEFAULT 0,
+      verification_code    TEXT,
+      verification_expires TEXT,
+      created_at           TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS watchlist (
@@ -40,6 +60,21 @@ async function init() {
 
     CREATE INDEX IF NOT EXISTS idx_watchlist_user_id ON watchlist(user_id);
   `);
+
+  // Upgrade path for existing databases: add the verification columns if a
+  // prior schema (without them) already created the users table.
+  const addedVerified = await ensureColumn('users', 'verified', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn('users', 'verification_code', 'TEXT');
+  await ensureColumn('users', 'verification_expires', 'TEXT');
+
+  // One-time grandfathering: when the `verified` column is first introduced on
+  // a database that already has users, treat those pre-existing accounts as
+  // verified so the new rule doesn't lock them out. This runs only on the
+  // migration itself — on a fresh DB the column already exists (added false),
+  // so genuinely-pending signups are never retroactively verified.
+  if (addedVerified) {
+    await db.execute('UPDATE users SET verified = 1');
+  }
 }
 
 module.exports = { db, init };
