@@ -1,0 +1,556 @@
+<title>India Exploit Window</title>
+<meta name="description" content="How fast CERT-In warns India about vulnerabilities already under active attack, measured against CISA's exploited-in-the-wild catalog.">
+<style>
+/* ============================================================
+   LAYOUT CONCEPT: a stacked-glass "radar" — the hero is a tilted
+   3D card deck (perimeter → WAF → app → data, echoing the layered
+   defense idea) that settles into place on load; sections below
+   sit on elevated, lightly-rotated panels rather than flat cards,
+   with depth coming from real transform/shadow layering, not a
+   gradient skin. Motion is used once, deliberately, on entry.
+   ============================================================ */
+:root{
+  /* ---- color: dark-first "night SOC" — deep indigo-black ground, amber alert accent ---- */
+  --bg:#0a0c12; --bg-2:#0e1119; --surface:#131722; --surface-2:#171c29;
+  --line:#242b3a; --line-soft:#1b212e;
+  --ink:#eef1f7; --ink-2:#aab2c4; --muted:#6c7488;
+  --accent:#ff9f45; --accent-dim:#c77830; --accent-glow:rgba(255,159,69,.35);
+  --violet:#8b7cf6; --violet-dim:#4e4499;
+  /* status palette is FIXED - never themed (dataviz skill, references/palette.md) */
+  --good:#0ca30c; --critical:#d03b3b;
+  --good-ink:#0ca30c; --critical-ink:#d03b3b;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --sans:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#f1f0eb; --bg-2:#e9e7e0; --surface:#ffffff; --surface-2:#f6f4ee;
+  --line:#ddd9cd; --line-soft:#e7e4d9;
+  --ink:#171510; --ink-2:#4e4a3f; --muted:#8a8475;
+  --accent:#b4530b; --accent-dim:#8a4109; --accent-glow:rgba(180,83,11,.18);
+  --violet:#5b4bc4; --violet-dim:#8c80db;
+  --good:#0ca30c; --critical:#d03b3b;
+  --good-ink:#0ca30c; --critical-ink:#d03b3b;
+  color-scheme:light;
+}}
+:root[data-theme="light"]{
+  --bg:#f1f0eb; --bg-2:#e9e7e0; --surface:#ffffff; --surface-2:#f6f4ee;
+  --line:#ddd9cd; --line-soft:#e7e4d9;
+  --ink:#171510; --ink-2:#4e4a3f; --muted:#8a8475;
+  --accent:#b4530b; --accent-dim:#8a4109; --accent-glow:rgba(180,83,11,.18);
+  --violet:#5b4bc4; --violet-dim:#8c80db;
+  --good:#0ca30c; --critical:#d03b3b;
+  --good-ink:#0ca30c; --critical-ink:#d03b3b;
+  color-scheme:light;
+}
+:root[data-theme="dark"]{color-scheme:dark}
+
+*{box-sizing:border-box}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important;scroll-behavior:auto!important}}
+
+html,body{background:var(--bg)}
+body{margin:0;color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  background:
+    radial-gradient(900px 500px at 15% -10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    radial-gradient(700px 500px at 100% 0%, color-mix(in srgb, var(--violet) 10%, transparent), transparent 55%),
+    var(--bg);
+}
+a{color:var(--accent)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+::selection{background:var(--accent-glow)}
+
+.wrap{max-width:1040px;margin:0 auto;padding-inline:20px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.1;font-family:var(--serif)}
+
+/* ---------- top nav ---------- */
+.nav{position:sticky;top:0;z-index:40;backdrop-filter:blur(14px) saturate(1.3);
+  background:color-mix(in srgb, var(--bg) 72%, transparent);
+  border-bottom:1px solid var(--line-soft)}
+.nav-row{max-width:1040px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:13px;color:var(--ink-2)}
+.brand .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-glow);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+.navbtn{font-family:var(--mono);font-size:11.5px;letter-spacing:.03em;background:transparent;
+  border:1px solid var(--line);color:var(--ink-2);border-radius:999px;padding:6px 13px;
+  cursor:pointer;transition:border-color .2s,color .2s}
+.navbtn:hover{border-color:var(--accent-dim);color:var(--ink)}
+
+/* ---------- HERO: 3D tilted card deck ---------- */
+.hero{padding:72px 0 46px;perspective:1400px}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:46px;align-items:center}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);display:inline-flex;align-items:center;gap:8px;margin-bottom:18px}
+.eyebrow::before{content:'';width:18px;height:1px;background:var(--accent)}
+h1.title{font-size:clamp(34px,5.6vw,58px);letter-spacing:-.02em;font-weight:600}
+h1.title em{font-style:normal;color:var(--accent)}
+.thesis{color:var(--ink-2);font-size:clamp(15px,1.9vw,17px);max-width:52ch;margin-top:18px}
+
+.meta-row{display:flex;gap:9px;flex-wrap:wrap;margin-top:24px}
+.chip{font-family:var(--mono);font-size:11px;padding:5px 11px;border-radius:999px;
+  background:var(--surface);border:1px solid var(--line);color:var(--ink-2);
+  display:inline-flex;align-items:center;gap:6px}
+.chip b{color:var(--ink);font-weight:600}
+
+/* the deck: 4 stacked layered cards in real 3D, tilted, settling in.
+   .deck-stage carries the motion.js entrance (opacity/scale/y) so it never
+   fights with .deck's own CSS-driven resting tilt + :hover transform. */
+.deck-stage{opacity:0}
+.deck{position:relative;height:340px;transform-style:preserve-3d;
+  transform:rotateX(14deg) rotateY(-16deg);
+  transition:transform .5s var(--ease)}
+.deck:hover{transform:rotateX(10deg) rotateY(-10deg)}
+@media (prefers-reduced-motion:reduce){.deck-stage{opacity:1}}
+.deck-card{position:absolute;left:50%;top:50%;width:260px;height:132px;border-radius:16px;
+  border:1px solid var(--line);background:linear-gradient(155deg,var(--surface-2),var(--surface));
+  box-shadow:0 24px 50px -18px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
+  padding:16px 18px;transition:transform .5s var(--ease), box-shadow .5s var(--ease);}
+.deck-card .k{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.deck-card .v{font-family:var(--serif);font-size:19px;margin-top:8px;color:var(--ink)}
+.deck-card .bar{margin-top:14px;height:5px;border-radius:3px;background:var(--line-soft);overflow:hidden}
+.deck-card .bar i{display:block;height:100%;border-radius:3px}
+.deck-card:nth-child(1){transform:translate3d(-50%,-50%,0px) translate(-54px,-64px)}
+.deck-card:nth-child(2){transform:translate3d(-50%,-50%,34px) translate(-18px,-28px)}
+.deck-card:nth-child(3){transform:translate3d(-50%,-50%,68px) translate(18px,8px)}
+.deck-card:nth-child(4){transform:translate3d(-50%,-50%,102px) translate(54px,44px);
+  border-color:color-mix(in srgb, var(--accent) 45%, var(--line));
+  box-shadow:0 28px 60px -16px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.06)}
+.deck:hover .deck-card:nth-child(1){transform:translate3d(-50%,-50%,0px) translate(-64px,-74px)}
+.deck:hover .deck-card:nth-child(2){transform:translate3d(-50%,-50%,34px) translate(-22px,-34px)}
+.deck:hover .deck-card:nth-child(3){transform:translate3d(-50%,-50%,68px) translate(22px,10px)}
+.deck:hover .deck-card:nth-child(4){transform:translate3d(-50%,-50%,102px) translate(64px,52px)}
+
+/* ---------- reveal-on-scroll: motion.js (motiondivision/motion) drives this
+   via inView() + animate(); .reveal is just a hook class. Default state is
+   fully visible so content never hides if the CDN import fails. ---------- */
+
+/* ---------- KPI shelf: elevated, slight alternating tilt ---------- */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:8px 0 32px;perspective:1000px}
+@media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:linear-gradient(160deg,var(--surface-2),var(--surface));border:1px solid var(--line);
+  border-radius:14px;padding:20px 18px;box-shadow:0 16px 32px -20px rgba(0,0,0,.5);
+  transition:transform .35s var(--ease),box-shadow .35s var(--ease);transform-style:preserve-3d}
+.kpi:hover{transform:translateY(-5px) rotateX(3deg);box-shadow:0 24px 40px -18px rgba(0,0,0,.6)}
+.kpi .n{font-family:var(--serif);font-size:32px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.kpi .n.accent{color:var(--accent)}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.01em}
+
+/* ---------- finding banner ---------- */
+.finding{position:relative;border-radius:16px;padding:22px 26px;margin-bottom:34px;overflow:hidden;
+  background:linear-gradient(135deg, color-mix(in srgb,var(--violet) 14%,var(--surface)), var(--surface));
+  border:1px solid var(--line);box-shadow:0 20px 44px -26px rgba(0,0,0,.55)}
+.finding::before{content:'';position:absolute;inset:0;border-radius:16px;padding:1px;
+  background:linear-gradient(135deg,var(--violet),transparent 55%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+.finding .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--violet);margin-bottom:9px;display:block}
+.finding p{margin:0;font-size:16px;line-height:1.6;color:var(--ink)}
+.finding b{color:var(--accent)}
+
+/* ---------- section cards ---------- */
+section.card{background:linear-gradient(160deg,var(--surface-2) 0%,var(--surface) 55%);
+  border:1px solid var(--line);border-radius:18px;padding:26px 26px 14px;
+  box-shadow:0 20px 50px -30px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.03);
+  margin-bottom:24px;position:relative}
+section.card h2{font-size:19px;font-weight:600}
+section.card .sub{color:var(--muted);font-size:13px;margin:6px 0 18px;max-width:60ch}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 14px;font-size:12.5px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+svg{display:block;width:100%;height:auto;overflow:visible}
+.tip{position:fixed;pointer-events:none;z-index:50;background:var(--ink);color:var(--bg);
+  font-family:var(--mono);font-size:11.5px;padding:7px 10px;border-radius:8px;
+  opacity:0;transition:opacity .1s;white-space:nowrap;box-shadow:0 10px 24px -8px rgba(0,0,0,.5)}
+
+/* ---------- 3D isometric vendor bars ---------- */
+.iso-wrap{perspective:900px}
+.iso-row{display:grid;grid-template-columns:120px 1fr 56px;align-items:center;gap:14px;
+  padding:10px 0;border-bottom:1px solid var(--line-soft)}
+.iso-row:last-child{border-bottom:none}
+.iso-name{font-size:13px;color:var(--ink-2);text-align:right}
+.iso-track{height:30px;position:relative;transform-style:preserve-3d}
+.iso-bar{position:absolute;left:0;top:3px;height:24px;border-radius:0 6px 6px 0;
+  transform-origin:left center;transition:transform .6s var(--ease), width 1s var(--ease);
+  box-shadow:4px 6px 14px -4px rgba(0,0,0,.45)}
+.iso-bar::after{content:'';position:absolute;right:-8px;top:0;width:8px;height:100%;
+  background:inherit;filter:brightness(.72);clip-path:polygon(0 0,100% 50%,0 100%)}
+.iso-bar:hover{transform:scaleY(1.12) translateY(-1px)}
+.iso-val{font-family:var(--mono);font-size:12.5px;font-weight:600;text-align:right}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line-soft)}
+th{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);
+  cursor:pointer;user-select:none;white-space:nowrap;transition:color .2s}
+th:hover{color:var(--accent)}
+td.mono,.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lagpill{font-family:var(--mono);font-size:11.5px;padding:2px 8px;border-radius:999px;font-weight:600;
+  display:inline-flex;align-items:center;gap:5px}
+.lagpill .ico{width:6px;height:6px;border-radius:50%}
+.tablewrap{overflow-x:auto;margin:0 -26px;padding:0 26px}
+.emptyrow td{color:var(--muted);text-align:center;padding:26px}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:var(--line-soft)}
+
+/* ---------- loader ---------- */
+.loader{display:flex;gap:14px;align-items:center;flex-wrap:wrap;
+  background:linear-gradient(135deg,var(--surface-2),var(--surface));
+  border:1px dashed var(--line);border-radius:14px;padding:16px 18px;margin-bottom:26px}
+.loader .txt{font-size:13px;color:var(--ink-2);min-width:220px;flex:1}
+.loader .txt b{color:var(--ink)}
+label.btn{font-family:var(--mono);font-size:12px;letter-spacing:.02em;
+  background:linear-gradient(135deg,var(--accent),var(--accent-dim));color:#160c02;
+  font-weight:600;padding:10px 16px;border-radius:9px;cursor:pointer;white-space:nowrap;
+  box-shadow:0 10px 24px -10px var(--accent-glow);transition:transform .2s,box-shadow .2s}
+label.btn:hover{transform:translateY(-2px);box-shadow:0 14px 30px -10px var(--accent-glow)}
+input[type=file]{display:none}
+
+/* ---------- method ---------- */
+.method{font-size:14px;color:var(--ink-2)}
+.method h3{font-family:var(--sans);font-size:13.5px;color:var(--ink);margin:20px 0 8px;font-weight:600}
+.method ul{margin:6px 0;padding-left:20px} .method li{margin:5px 0}
+.caveat{position:relative;border-radius:12px;padding:14px 16px 14px 18px;margin:14px 0;
+  font-size:13.5px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line)}
+.caveat::before{content:'';position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:3px;
+  background:linear-gradient(var(--critical-ink),var(--accent))}
+
+footer{color:var(--muted);font-size:12px;text-align:center;margin:40px 0 20px;
+  padding-top:20px;border-top:1px solid var(--line-soft)}
+footer .hl{color:var(--ink-2)}
+</style>
+
+<nav class="nav"><div class="nav-row">
+  <div class="brand"><span class="dot"></span> india-exploit-window</div>
+  <button class="navbtn" id="themeBtn">switch theme</button>
+</div></nav>
+<div class="tip" id="tip"></div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">CERT-In × CISA KEV</div>
+        <h1 class="title">The exploit<br>is live. <em>Is the warning?</em></h1>
+        <p class="thesis">When a CVE is confirmed under active attack, how many days pass before India's national CERT tells anyone? This measures that gap across 2026 — vendor by vendor.</p>
+        <div class="meta-row">
+          <span class="chip">📅 Year: <b id="chipYears">2026</b></span>
+          <span class="chip">🔎 Matched: <b id="chipMatched">123 CVEs</b></span>
+          <span class="chip">🗂 Source: <b id="chipState">2026 run</b></span>
+        </div>
+      </div>
+      <div class="deck-stage">
+        <div class="deck" aria-hidden="true">
+          <div class="deck-card"><div class="k">Perimeter</div><div class="v">WAF + rate limit</div>
+            <div class="bar"><i style="width:82%;background:var(--violet-dim)"></i></div></div>
+          <div class="deck-card"><div class="k">Access control</div><div class="v">Auth · JWT</div>
+            <div class="bar"><i style="width:68%;background:var(--violet)"></i></div></div>
+          <div class="deck-card"><div class="k">App layer</div><div class="v">Least privilege</div>
+            <div class="bar"><i style="width:91%;background:var(--accent-dim)"></i></div></div>
+          <div class="deck-card"><div class="k">⚠ Warning lag</div><div class="v" id="deckLag">+1 day median</div>
+            <div class="bar"><i style="width:21%;background:var(--accent)"></i></div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="loader reveal">
+    <div class="txt"><b>Showing the 2026 run.</b> Load your <span class="mono">joined.csv</span> to recompute every number from your real data — all local, nothing uploaded.</div>
+    <label class="btn" for="csv">↑ Load joined.csv</label>
+    <input type="file" id="csv" accept=".csv,text/csv">
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="finding reveal" id="findingBox">
+    <span class="tag">The finding</span>
+    <p id="finding"></p>
+  </div>
+
+  <section class="card reveal">
+    <h2>How timely were the warnings?</h2>
+    <p class="sub">Every exploited CVE, split by when CERT-In warned relative to CISA's confirmed exploitation date.</p>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--good-ink)"></i> Before CISA</span>
+      <span><i class="sw" style="background:var(--muted)"></i> Within 6 days</span>
+      <span><i class="sw" style="background:var(--critical-ink)"></i> 7+ days late</span>
+    </div>
+    <svg id="distChart" viewBox="0 0 680 130" role="img" aria-label="Distribution of warning timeliness"></svg>
+  </section>
+
+  <section class="card reveal">
+    <h2>Median lag by vendor</h2>
+    <p class="sub">Isometric bars, longest gap first. Positive = CERT-In warned later than CISA confirmed exploitation.</p>
+    <div class="iso-wrap" id="isoChart"></div>
+  </section>
+
+  <section class="card reveal">
+    <h2>Matched CVEs</h2>
+    <p class="sub" id="tableSub">Load <span class="mono">joined.csv</span> to list every exploited CVE with both dates and the lag.</p>
+    <div class="tablewrap">
+      <table id="tbl">
+        <thead><tr>
+          <th data-k="cve">CVE</th><th data-k="vendor">Vendor</th>
+          <th data-k="kev_date">CISA exploited</th><th data-k="certin_date">CERT-In warned</th>
+          <th data-k="lag_days" class="num">Lag</th>
+        </tr></thead>
+        <tbody id="tbody"><tr class="emptyrow"><td colspan="5">No rows loaded yet.</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card method reveal">
+    <h2 style="font-size:18px">Method &amp; honest caveats</h2>
+    <h3>How it's measured</h3>
+    <ul>
+      <li>Collect every CERT-In Vulnerability Note for the year; extract its publish date and CVE IDs.</li>
+      <li>Download CISA's Known Exploited Vulnerabilities (KEV) catalog — CVEs confirmed exploited in the wild, with the date each was added.</li>
+      <li>Match by CVE ID. <b style="color:var(--ink)">Lag = CERT-In advisory date − CISA KEV date.</b> Keep CERT-In's first mention of each CVE.</li>
+    </ul>
+    <h3>What the numbers actually say</h3>
+    <div class="caveat">CERT-In is <b style="color:var(--ink)">fast on average</b> — median lag near zero, sometimes warning <b style="color:var(--ink)">before</b> CISA. The story isn't "India is slow." A <b style="color:var(--ink)">minority of cases run a week or more late</b>, concentrated in specific vendors.</div>
+    <div class="caveat">The matched set is small (CVEs in both CERT-In notes and CISA KEV). Per-vendor medians rest on a handful of CVEs each — directional, not statistically strong. Running 2023–2024 widens the base.</div>
+    <h3>Sources</h3>
+    <ul>
+      <li><a href="https://www.cert-in.org.in/s2cMainServlet?pageid=VLNLIST" target="_blank" rel="noopener">CERT-In Vulnerability Notes</a></li>
+      <li><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener">CISA Known Exploited Vulnerabilities Catalog</a></li>
+    </ul>
+  </section>
+
+  <footer>Built as a security research project · <span class="hl">all analysis runs locally in your browser</span></footer>
+</div>
+
+<script type="module">
+// motion (motiondivision/motion — github.com/motiondivision/motion), loaded
+// as an ES module build from jsdelivr, exact version pinned.
+import { animate, inView, stagger } from "https://cdn.jsdelivr.net/npm/motion@14.0.0/+esm";
+var reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+var EASE = [0.16, 1, 0.3, 1];
+
+var RUN = {
+  years:"2026", source:"2026 run",
+  notes:487, cves:3536, matched:123, medianLag:1,
+  pctBefore:28, pctWeek:53, pctLate:19,
+  vendors:[
+    {vendor:"Apple", lag:14}, {vendor:"Synacor", lag:11}, {vendor:"Check Point", lag:4},
+    {vendor:"SonicWall", lag:4}, {vendor:"Ivanti", lag:3}, {vendor:"Google", lag:3},
+    {vendor:"Microsoft", lag:1}, {vendor:"Cisco", lag:1}
+  ],
+  rows:[]
+};
+
+var tip=document.getElementById('tip');
+function showTip(e,html){tip.innerHTML=html;tip.style.opacity=1;moveTip(e);}
+function moveTip(e){var x=e.clientX+14,y=e.clientY+14;
+  if(x>innerWidth-170)x=e.clientX-tip.offsetWidth-14;tip.style.left=x+'px';tip.style.top=y+'px';}
+function hideTip(){tip.style.opacity=0;}
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
+
+function renderKPIs(){
+  var k=[
+    [RUN.notes.toLocaleString(),"CERT-In notes",false],
+    [RUN.cves.toLocaleString(),"CVEs referenced",false],
+    [RUN.matched.toLocaleString(),"also in CISA KEV",false],
+    [(RUN.medianLag>0?"+":"")+RUN.medianLag+"d","median warning lag",true]
+  ];
+  document.getElementById('kpis').innerHTML=k.map(function(x){
+    return '<div class="kpi"><div class="n'+(x[2]?' accent':'')+'">'+x[0]+'</div><div class="l">'+x[1]+'</div></div>';
+  }).join('');
+  document.getElementById('chipYears').textContent=RUN.years;
+  document.getElementById('chipMatched').textContent=RUN.matched+' CVEs';
+  document.getElementById('chipState').textContent=RUN.source;
+  document.getElementById('deckLag').textContent=(RUN.medianLag>0?'+':'')+RUN.medianLag+' day median';
+}
+
+function renderFinding(){
+  document.getElementById('finding').innerHTML=
+    'Across <b>'+RUN.matched+'</b> exploited CVEs in '+RUN.years+', CERT-In’s median warning lag was <b>'+
+    (RUN.medianLag>0?'+':'')+RUN.medianLag+' day'+(Math.abs(RUN.medianLag)===1?'':'s')+'</b>. '+
+    'It warned <b>before</b> CISA <b>'+RUN.pctBefore+'%</b> of the time — but was <b>7+ days late in '+
+    RUN.pctLate+'%</b> of cases, and that lag concentrates in a few vendors.';
+}
+
+function renderDist(){
+  var svg=document.getElementById('distChart'),W=680,segs=[
+    {k:'before',label:'Before CISA',v:RUN.pctBefore,c:css('--good-ink')},
+    {k:'week',label:'Within 6 days',v:RUN.pctWeek,c:css('--muted')},
+    {k:'late',label:'7+ days late',v:RUN.pctLate,c:css('--critical-ink')}
+  ];
+  var total=segs.reduce(function(a,s){return a+s.v;},0)||1,x=0,barY=38,barH=50,s='';
+  s+='<defs><linearGradient id="barsheen" x1="0" y1="0" x2="0" y2="1">'+
+     '<stop offset="0%" stop-color="#fff" stop-opacity=".16"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>';
+  segs.forEach(function(sg){
+    var w=(sg.v/total)*W;
+    s+='<rect x="'+(x+1)+'" y="'+barY+'" width="'+Math.max(w-2,0)+'" height="'+barH+'" rx="6" fill="'+sg.c+'"'+
+       ' data-l="'+sg.label+'" data-v="'+sg.v+'" style="cursor:pointer"></rect>';
+    s+='<rect x="'+(x+1)+'" y="'+barY+'" width="'+Math.max(w-2,0)+'" height="'+Math.round(barH*.45)+'" rx="6" fill="url(#barsheen)" style="pointer-events:none"></rect>';
+    if(w>50) s+='<text x="'+(x+w/2)+'" y="'+(barY+barH/2+1)+'" text-anchor="middle" dominant-baseline="middle"'+
+       ' font-family="'+css('--mono')+'" font-size="14" font-weight="700" fill="#0a0c12" style="pointer-events:none">'+sg.v+'%</text>';
+    x+=w;
+  });
+  s+='<text x="0" y="20" font-family="'+css('--mono')+'" font-size="11" fill="'+css('--muted')+'">share of exploited CVEs, by warning timeliness</text>';
+  svg.innerHTML=s;
+  [].forEach.call(svg.querySelectorAll('rect[data-l]'),function(r){
+    r.addEventListener('mousemove',function(e){showTip(e,r.getAttribute('data-l')+': <b>'+r.getAttribute('data-v')+'%</b>');});
+    r.addEventListener('mouseleave',hideTip);
+  });
+}
+
+function renderVendors(){
+  var el=document.getElementById('isoChart');
+  var data=RUN.vendors.slice().sort(function(a,b){return b.lag-a.lag;});
+  var max=Math.max.apply(null,data.map(function(d){return d.lag;}).concat([7]));
+  var worst=Math.max.apply(null,data.map(function(d){return d.lag;}));
+  el.innerHTML=data.map(function(d,i){
+    var pct=Math.max((d.lag/max)*100,4);
+    var isWorst=d.lag===worst;
+    var col=isWorst?'var(--critical-ink)':'var(--accent)';
+    return '<div class="iso-row">'+
+      '<div class="iso-name">'+esc(d.vendor)+'</div>'+
+      '<div class="iso-track"><div class="iso-bar" data-v="'+esc(d.vendor)+'" data-l="'+d.lag+'" '+
+        'style="width:'+pct+'%;background:'+col+'"></div></div>'+
+      '<div class="iso-val" style="color:'+col+'">'+(d.lag>0?'+':'')+d.lag+'d</div></div>';
+  }).join('');
+  [].forEach.call(el.querySelectorAll('.iso-bar'),function(r){
+    r.addEventListener('mousemove',function(e){showTip(e,r.getAttribute('data-v')+': median <b>+'+r.getAttribute('data-l')+' days</b>');});
+    r.addEventListener('mouseleave',hideTip);
+  });
+  animateVendorRows();
+}
+
+var sortK='lag_days',sortDir=-1;
+function renderTable(){
+  var tb=document.getElementById('tbody');
+  if(!RUN.rows.length){tb.innerHTML='<tr class="emptyrow"><td colspan="5">No rows loaded yet. Load your joined.csv above.</td></tr>';return;}
+  var rows=RUN.rows.slice().sort(function(a,b){
+    var x=a[sortK],y=b[sortK];
+    if(sortK==='lag_days'){x=+x;y=+y;}
+    return (x<y?-1:x>y?1:0)*sortDir;
+  });
+  document.getElementById('tableSub').innerHTML=rows.length+' exploited CVEs matched. Click a column to sort.';
+  tb.innerHTML=rows.map(function(r){
+    var lag=+r.lag_days, col= lag>=7?'var(--critical-ink)':lag<0?'var(--good-ink)':'var(--ink-2)';
+    var bg= lag>=7?'color-mix(in srgb, var(--critical) 18%, transparent)':
+            lag<0?'color-mix(in srgb, var(--good) 16%, transparent)':'transparent';
+    return '<tr><td class="mono">'+esc(r.cve)+'</td><td>'+esc(r.vendor||'')+'</td>'+
+      '<td class="mono">'+esc(r.kev_date||'')+'</td><td class="mono">'+esc(r.certin_date||'')+'</td>'+
+      '<td class="num"><span class="lagpill" style="color:'+col+';background:'+bg+'"><i class="ico" style="background:'+col+'"></i>'+(lag>0?'+':'')+lag+'</span></td></tr>';
+  }).join('');
+}
+document.querySelectorAll('#tbl th').forEach(function(th){
+  th.addEventListener('click',function(){
+    var k=th.getAttribute('data-k');
+    if(k===sortK)sortDir*=-1;else{sortK=k;sortDir=(k==='lag_days')?-1:1;}
+    renderTable();
+  });
+});
+
+function parseCSV(text){
+  var lines=text.replace(/\r/g,'').split('\n').filter(function(l){return l.trim();});
+  if(!lines.length)return[];
+  var head=lines[0].split(',').map(function(h){return h.trim();});
+  function idx(names){for(var i=0;i<head.length;i++){if(names.indexOf(head[i].toLowerCase())>-1)return i;}return -1;}
+  var ci={cve:idx(['cve','cve_id','cveid']),vendor:idx(['vendor','vendorproject','vendor_project']),
+    kev:idx(['kev_date','dateadded','date_added']),certin:idx(['note_date','certin_date','cert_in_date']),
+    lag:idx(['lag_days','lag'])};
+  var out=[];
+  for(var i=1;i<lines.length;i++){
+    var c=lines[i].split(',');
+    if(ci.cve<0||!c[ci.cve])continue;
+    out.push({cve:c[ci.cve].trim(),vendor:ci.vendor>-1?(c[ci.vendor]||'').trim():'',
+      kev_date:ci.kev>-1?(c[ci.kev]||'').trim():'',certin_date:ci.certin>-1?(c[ci.certin]||'').trim():'',
+      lag_days:ci.lag>-1?parseInt(c[ci.lag],10):NaN});
+  }
+  return out.filter(function(r){return !isNaN(r.lag_days);});
+}
+function median(a){if(!a.length)return 0;var s=a.slice().sort(function(x,y){return x-y;}),m=s.length>>1;
+  return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);}
+function recompute(rows){
+  RUN.rows=rows;RUN.matched=rows.length;RUN.source='your joined.csv';
+  var lags=rows.map(function(r){return r.lag_days;});
+  RUN.medianLag=median(lags);
+  var n=lags.length||1;
+  RUN.pctBefore=Math.round(100*lags.filter(function(l){return l<0;}).length/n);
+  RUN.pctLate=Math.round(100*lags.filter(function(l){return l>=7;}).length/n);
+  RUN.pctWeek=Math.max(0,100-RUN.pctBefore-RUN.pctLate);
+  var byV={};rows.forEach(function(r){if(!r.vendor)return;(byV[r.vendor]=byV[r.vendor]||[]).push(r.lag_days);});
+  RUN.vendors=Object.keys(byV).filter(function(v){return byV[v].length>=3;})
+    .map(function(v){return{vendor:v,lag:median(byV[v]),n:byV[v].length};})
+    .sort(function(a,b){return b.lag-a.lag;}).slice(0,8);
+  if(!RUN.vendors.length)
+    RUN.vendors=Object.keys(byV).map(function(v){return{vendor:v,lag:median(byV[v])};})
+      .sort(function(a,b){return b.lag-a.lag;}).slice(0,8);
+  renderAll();
+  animateKPIs();
+}
+document.getElementById('csv').addEventListener('change',function(e){
+  var f=e.target.files[0];if(!f)return;var rd=new FileReader();
+  rd.onload=function(){try{var rows=parseCSV(rd.result);
+    if(!rows.length){alert('No usable rows found. Expected columns like cve, vendor, kev_date, note_date, lag_days.');return;}
+    recompute(rows);
+  }catch(err){alert('Could not read that CSV: '+err.message);}};
+  rd.readAsText(f);
+});
+
+function renderAll(){renderKPIs();renderFinding();renderDist();renderVendors();renderTable();}
+
+function animateVendorRows(){
+  if(reducedMotion)return;
+  var rows=document.querySelectorAll('#isoChart .iso-row');
+  if(!rows.length)return;
+  animate(rows, {opacity:[0,1], x:[-14,0]}, {duration:.5, delay:stagger(.06), easing:EASE});
+}
+
+function animateKPIs(){
+  if(reducedMotion)return;
+  var tiles=document.querySelectorAll('#kpis .kpi');
+  if(!tiles.length)return;
+  animate(tiles, {opacity:[0,1], y:[16,0]}, {duration:.5, delay:stagger(.07), easing:EASE});
+}
+
+function animateHero(){
+  if(reducedMotion){
+    document.querySelector('.deck-stage').style.opacity=1;
+    return;
+  }
+  animate('.eyebrow', {opacity:[0,1], y:[14,0]}, {duration:.6, easing:EASE});
+  animate('h1.title', {opacity:[0,1], y:[18,0]}, {duration:.7, delay:.1, easing:EASE});
+  animate('.thesis', {opacity:[0,1], y:[14,0]}, {duration:.7, delay:.2, easing:EASE});
+  animate('.meta-row', {opacity:[0,1], y:[10,0]}, {duration:.6, delay:.3, easing:EASE});
+  animate('.deck-stage', {opacity:[0,1], scale:[0.88,1], y:[-24,0]},
+    {duration:1, delay:.15, easing:EASE});
+  animate('.deck-card', {opacity:[0,1]}, {duration:.5, delay:stagger(.09,{startDelay:.4})});
+}
+
+function setupSectionReveals(){
+  if(reducedMotion)return;
+  document.querySelectorAll('.reveal').forEach(function(el){
+    inView(el, function(){
+      animate(el, {opacity:[0,1], y:[24,0]}, {duration:.7, easing:EASE});
+    }, {margin:'-10% 0px -10% 0px'});
+  });
+}
+
+var root=document.documentElement;
+try{var sv=localStorage.getItem('iew-theme');if(sv)root.setAttribute('data-theme',sv);}catch(e){}
+document.getElementById('themeBtn').addEventListener('click',function(){
+  var cur=root.getAttribute('data-theme');
+  var next=cur==='dark'?'light':cur==='light'?'dark':(matchMedia('(prefers-color-scheme:dark)').matches?'light':'dark');
+  root.setAttribute('data-theme',next);
+  try{localStorage.setItem('iew-theme',next);}catch(e){}
+  setTimeout(function(){renderDist();renderVendors();},20);
+});
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',function(){renderDist();renderVendors();});
+
+renderAll();
+animateHero();
+animateKPIs();
+setupSectionReveals();
+</script>
