@@ -223,13 +223,109 @@ input[type=file]{display:none}
 footer{color:var(--muted);font-size:12px;text-align:center;margin:40px 0 20px;
   padding-top:20px;border-top:1px solid var(--line-soft)}
 footer .hl{color:var(--ink-2)}
+
+/* ---------- vendor search ---------- */
+.search-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.search-input{flex:1;min-width:180px;font-family:var(--mono);font-size:12.5px;padding:7px 12px;
+  border-radius:8px;border:1px solid var(--line);background:var(--bg-2);color:var(--ink);
+  outline:none;transition:border-color .18s}
+.search-input:focus{border-color:var(--accent-dim)}
+.search-input::placeholder{color:var(--muted)}
+.search-count{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap}
+
+/* ---------- auth button in nav ---------- */
+.navbtn.auth-btn{margin-right:6px}
+.navbtn.auth-btn.signed-in{border-color:var(--good);color:var(--good-ink)}
+
+/* ---------- contact section ---------- */
+.contact-card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  padding:28px 28px 24px;margin-top:8px}
+.contact-card h2{font-size:17px;margin:0 0 6px}
+.contact-card p{font-size:13.5px;color:var(--ink-2);margin:0 0 18px;line-height:1.6}
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:540px){.contact-grid{grid-template-columns:1fr}}
+.contact-field label{display:block;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+.contact-field input,.contact-field textarea{width:100%;font-family:var(--sans);font-size:13px;
+  padding:8px 11px;border-radius:8px;border:1px solid var(--line);
+  background:var(--bg-2);color:var(--ink);outline:none;transition:border-color .18s;resize:vertical}
+.contact-field input:focus,.contact-field textarea:focus{border-color:var(--accent-dim)}
+.contact-field textarea{min-height:80px}
+.contact-field.full{grid-column:1/-1}
+.contact-actions{margin-top:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.contact-submit{font-family:var(--mono);font-size:12px;padding:8px 20px;border-radius:999px;
+  border:none;background:var(--accent);color:#0a0c12;cursor:pointer;font-weight:700;
+  transition:opacity .18s}
+.contact-submit:hover{opacity:.85}
+.contact-email-row{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.contact-email-row a{color:var(--accent-dim);text-decoration:none}
+.contact-email-row a:hover{text-decoration:underline}
+.copy-ok{color:var(--good-ink);font-size:11px;opacity:0;transition:opacity .3s}
+
+/* ---------- watchlist modal ---------- */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-backdrop.open{opacity:1;pointer-events:auto}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:18px;
+  padding:28px 28px 24px;width:min(360px,calc(100vw - 40px));
+  box-shadow:0 32px 64px -24px rgba(0,0,0,.7);
+  transform:translateY(8px);transition:transform .2s}
+.modal-backdrop.open .modal{transform:translateY(0)}
+.modal h3{font-size:17px;margin-bottom:6px;font-family:var(--sans);font-weight:600}
+.modal p{font-size:13px;color:var(--ink-2);margin:0 0 20px}
+.modal label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:5px;margin-top:14px}
+.modal input[type=email],.modal input[type=password]{width:100%;background:var(--bg);
+  border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 12px;
+  font-family:var(--mono);font-size:13px;outline:none;transition:border-color .2s}
+.modal input:focus{border-color:var(--accent)}
+.modal-err{font-size:12.5px;color:var(--critical-ink);margin-top:10px;min-height:18px}
+.modal-actions{display:flex;gap:10px;margin-top:20px;justify-content:flex-end}
+.modal-btn{font-family:var(--mono);font-size:12px;letter-spacing:.02em;padding:9px 16px;
+  border-radius:9px;border:none;cursor:pointer;font-weight:600;
+  transition:transform .15s,opacity .15s}
+.modal-btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent-dim));
+  color:#160c02;box-shadow:0 8px 20px -8px var(--accent-glow)}
+.modal-btn.primary:hover{transform:translateY(-2px)}
+.modal-btn.secondary{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+.modal-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ---------- watch button in table ---------- */
+.watch-btn{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:999px;
+  border:1px solid var(--line);background:transparent;color:var(--ink-2);cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s;white-space:nowrap}
+.watch-btn:hover{border-color:var(--accent-dim);color:var(--accent)}
+.watch-btn.saved{border-color:var(--good-ink);color:var(--good-ink);
+  background:color-mix(in srgb,var(--good) 14%,transparent)}
+.watch-btn:disabled{opacity:.6;cursor:default}
 </style>
 
 <nav class="nav"><div class="nav-row">
   <div class="brand"><span class="dot"></span> india-exploit-window</div>
-  <button class="navbtn" id="themeBtn">switch theme</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button class="navbtn auth-btn" id="authNavBtn">sign in</button>
+    <button class="navbtn" id="themeBtn">switch theme</button>
+  </div>
 </div></nav>
 <div class="tip" id="tip"></div>
+
+<!-- Watchlist login modal -->
+<div class="modal-backdrop" id="wlModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <h3 id="modalTitle">Save to watchlist</h3>
+    <p>Sign in (or create an account) to track this CVE across sessions.</p>
+    <label for="modalEmail">Email</label>
+    <input type="email" id="modalEmail" autocomplete="email" placeholder="you@example.com">
+    <label for="modalPassword">Password <span style="color:var(--muted);font-size:10px;text-transform:none">(min 8 chars)</span></label>
+    <input type="password" id="modalPassword" autocomplete="current-password" placeholder="••••••••">
+    <div class="modal-err" id="modalErr"></div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="modalCancel">Cancel</button>
+      <button class="modal-btn primary" id="modalSubmit">Sign in / Sign up</button>
+    </div>
+  </div>
+</div>
 
 <div class="wrap">
 
@@ -293,14 +389,18 @@ footer .hl{color:var(--ink-2)}
   <section class="card reveal">
     <h2>Matched CVEs</h2>
     <p class="sub" id="tableSub">Load <span class="mono">joined.csv</span> to list every exploited CVE with both dates and the lag.</p>
+    <div class="search-row">
+      <input class="search-input" id="vendorSearch" type="text" placeholder="Search vendor or CVE ID…" autocomplete="off" spellcheck="false">
+      <span class="search-count" id="searchCount"></span>
+    </div>
     <div class="tablewrap">
       <table id="tbl">
         <thead><tr>
           <th data-k="cve">CVE</th><th data-k="vendor">Vendor</th>
           <th data-k="kev_date">CISA exploited</th><th data-k="certin_date">CERT-In warned</th>
-          <th data-k="lag_days" class="num">Lag</th>
+          <th data-k="lag_days" class="num">Lag</th><th>Watch</th>
         </tr></thead>
-        <tbody id="tbody"><tr class="emptyrow"><td colspan="5">No rows loaded yet.</td></tr></tbody>
+        <tbody id="tbody"><tr class="emptyrow"><td colspan="6">No rows loaded yet.</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -321,6 +421,25 @@ footer .hl{color:var(--ink-2)}
       <li><a href="https://www.cert-in.org.in/s2cMainServlet?pageid=VLNLIST" target="_blank" rel="noopener">CERT-In Vulnerability Notes</a></li>
       <li><a href="https://www.cisa.gov/known-exploited-vulnerabilities-catalog" target="_blank" rel="noopener">CISA Known Exploited Vulnerabilities Catalog</a></li>
     </ul>
+  </section>
+
+  <section class="card reveal">
+    <div class="contact-card">
+      <h2>Get in touch</h2>
+      <p>Found a data issue, want to suggest a feature, or need a similar dashboard for your organisation? Send a query below or reach out directly.</p>
+      <div class="contact-grid">
+        <div class="contact-field"><label>Your name</label><input type="text" id="cName" placeholder="Rahul Sharma"></div>
+        <div class="contact-field"><label>Your email</label><input type="email" id="cEmail" placeholder="you@example.com"></div>
+        <div class="contact-field full"><label>Message</label><textarea id="cMsg" placeholder="I noticed that… / Can you add… / I need…"></textarea></div>
+      </div>
+      <div class="contact-actions">
+        <button class="contact-submit" id="contactSubmit">Send query</button>
+        <span class="copy-ok" id="contactOk">✓ Sent</span>
+        <span class="contact-email-row">or email directly: <a href="mailto:gcollab749@gmail.com" id="contactEmailLink">gcollab749@gmail.com</a>
+          <button class="navbtn" style="margin-left:8px;padding:3px 9px;font-size:10px" id="copyEmail">copy</button>
+        </span>
+      </div>
+    </div>
   </section>
 
   <footer>Built as a security research project · <span class="hl">all analysis runs locally in your browser</span></footer>
@@ -428,20 +547,32 @@ function renderVendors(){
 var sortK='lag_days',sortDir=-1;
 function renderTable(){
   var tb=document.getElementById('tbody');
-  if(!RUN.rows.length){tb.innerHTML='<tr class="emptyrow"><td colspan="5">No rows loaded yet. Load your joined.csv above.</td></tr>';return;}
-  var rows=RUN.rows.slice().sort(function(a,b){
+  if(!RUN.rows.length){tb.innerHTML='<tr class="emptyrow"><td colspan="6">No rows loaded yet. Load your joined.csv above.</td></tr>';return;}
+  var q=(document.getElementById('vendorSearch')||{value:''}).value.trim().toLowerCase();
+  var filtered=q?RUN.rows.filter(function(r){
+    return (r.vendor||'').toLowerCase().indexOf(q)>-1||r.cve.toLowerCase().indexOf(q)>-1;
+  }):RUN.rows;
+  var rows=filtered.slice().sort(function(a,b){
     var x=a[sortK],y=b[sortK];
     if(sortK==='lag_days'){x=+x;y=+y;}
     return (x<y?-1:x>y?1:0)*sortDir;
   });
-  document.getElementById('tableSub').innerHTML=rows.length+' exploited CVEs matched. Click a column to sort.';
+  var sc=document.getElementById('searchCount');
+  if(sc)sc.textContent=q?(rows.length+' of '+RUN.rows.length+' results'):'';
+  document.getElementById('tableSub').innerHTML=RUN.rows.length+' exploited CVEs matched. Click a column to sort.';
   tb.innerHTML=rows.map(function(r){
     var lag=+r.lag_days, col= lag>=7?'var(--critical-ink)':lag<0?'var(--good-ink)':'var(--ink-2)';
     var bg= lag>=7?'color-mix(in srgb, var(--critical) 18%, transparent)':
             lag<0?'color-mix(in srgb, var(--good) 16%, transparent)':'transparent';
-    return '<tr><td class="mono">'+esc(r.cve)+'</td><td>'+esc(r.vendor||'')+'</td>'+
+    var cv=esc(r.cve), vn=esc(r.vendor||'');
+    var isSaved=watchedCVEs.has(r.cve);
+    var btnCls='watch-btn'+(isSaved?' saved':'');
+    var btnTxt=isSaved?'✓ Saved':'⊕ Watch';
+    var btnDis=isSaved?' disabled':'';
+    return '<tr><td class="mono">'+cv+'</td><td>'+vn+'</td>'+
       '<td class="mono">'+esc(r.kev_date||'')+'</td><td class="mono">'+esc(r.certin_date||'')+'</td>'+
-      '<td class="num"><span class="lagpill" style="color:'+col+';background:'+bg+'"><i class="ico" style="background:'+col+'"></i>'+(lag>0?'+':'')+lag+'</span></td></tr>';
+      '<td class="num"><span class="lagpill" style="color:'+col+';background:'+bg+'"><i class="ico" style="background:'+col+'"></i>'+(lag>0?'+':'')+lag+'</span></td>'+
+      '<td><button class="'+btnCls+'"'+btnDis+' onclick="window._onWatch(\''+cv+'\',\''+vn+'\',this)">'+btnTxt+'</button></td></tr>';
   }).join('');
 }
 document.querySelectorAll('#tbl th').forEach(function(th){
@@ -451,6 +582,7 @@ document.querySelectorAll('#tbl th').forEach(function(th){
     renderTable();
   });
 });
+document.getElementById('vendorSearch').addEventListener('input',renderTable);
 
 function parseCSV(text){
   var lines=text.replace(/\r/g,'').split('\n').filter(function(l){return l.trim();});
@@ -553,4 +685,204 @@ renderAll();
 animateHero();
 animateKPIs();
 setupSectionReveals();
+
+/* ============================================================
+   WATCHLIST — token management, modal, API calls
+   ============================================================ */
+var API='https://vulnwatch-y3e8.onrender.com';
+var watchlistToken=null;
+var watchedCVEs=new Set();
+try{watchlistToken=localStorage.getItem('iew-wl-token');}catch(e){}
+
+function getToken(){return watchlistToken;}
+function setToken(t){watchlistToken=t;try{localStorage.setItem('iew-wl-token',t);}catch(e){}}
+function clearToken(){watchlistToken=null;try{localStorage.removeItem('iew-wl-token');}catch(e){}}
+
+function loadWatchedCVEs(){
+  var tok=getToken();
+  if(!tok)return;
+  fetch(API+'/watchlist',{headers:{'Authorization':'Bearer '+tok}})
+    .then(function(r){if(r.status===401){clearToken();return null;}return r.json();})
+    .then(function(data){
+      if(!data||!data.items)return;
+      watchedCVEs=new Set(data.items.map(function(i){return i.cve;}));
+      /* mark already-saved buttons */
+      document.querySelectorAll('.watch-btn').forEach(function(btn){
+        var cve=btn.getAttribute('onclick')||'';
+        var m=cve.match(/'([^']+)'/);
+        if(m&&watchedCVEs.has(m[1])){btn.textContent='✓ Saved';btn.classList.add('saved');btn.disabled=true;}
+      });
+    }).catch(function(){});
+}
+
+function markSaved(btn){
+  btn.textContent='✓ Saved';
+  btn.classList.add('saved');
+  btn.disabled=true;
+}
+
+var _watchPending=null;
+
+function openLoginModal(cve,vendor,btn){
+  _watchPending={cve:cve,vendor:vendor,btn:btn};
+  document.getElementById('modalEmail').value='';
+  document.getElementById('modalPassword').value='';
+  document.getElementById('modalErr').textContent='';
+  document.getElementById('wlModal').classList.add('open');
+  setTimeout(function(){document.getElementById('modalEmail').focus();},80);
+}
+
+function closeModal(){
+  document.getElementById('wlModal').classList.remove('open');
+  _watchPending=null;
+}
+
+document.getElementById('modalCancel').addEventListener('click',closeModal);
+document.getElementById('wlModal').addEventListener('click',function(e){
+  if(e.target===this)closeModal();
+});
+document.getElementById('modalPassword').addEventListener('keydown',function(e){
+  if(e.key==='Enter')doLogin();
+});
+document.getElementById('modalEmail').addEventListener('keydown',function(e){
+  if(e.key==='Enter')document.getElementById('modalPassword').focus();
+});
+document.getElementById('modalSubmit').addEventListener('click',doLogin);
+
+function doLogin(){
+  var email=document.getElementById('modalEmail').value.trim();
+  var password=document.getElementById('modalPassword').value;
+  var errEl=document.getElementById('modalErr');
+  var btn=document.getElementById('modalSubmit');
+  if(!email||!password){errEl.textContent='Enter email and password.';return;}
+  btn.disabled=true;btn.textContent='Signing in…';errEl.textContent='';
+  fetch(API+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:email,password:password})})
+    .then(function(r){return r.json().then(function(d){return{status:r.status,data:d};});})
+    .then(function(res){
+      if(res.status===200&&res.data.token){
+        setToken(res.data.token);
+        closeModal();
+        if(_watchPending===null&&res.data.token){
+          /* modal was closed before we got here — do nothing */
+        }
+      } else if(res.data&&res.data.message&&res.data.message.indexOf('Invalid')>-1){
+        /* auto-signup fallback */
+        return fetch(API+'/auth/signup',{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({email:email,password:password})})
+          .then(function(r2){return r2.json().then(function(d2){return{status:r2.status,data:d2};});})
+          .then(function(res2){
+            if(res2.status===201&&res2.data.token){
+              setToken(res2.data.token);
+              closeModal();
+            } else {
+              errEl.textContent=(res2.data&&res2.data.message)||'Could not sign up. Try again.';
+              btn.disabled=false;btn.textContent='Sign in / Sign up';
+            }
+          });
+      } else {
+        errEl.textContent=(res.data&&res.data.message)||'Sign-in failed. Try again.';
+        btn.disabled=false;btn.textContent='Sign in / Sign up';
+      }
+    })
+    .catch(function(){
+      errEl.textContent='Network error — check your connection.';
+      btn.disabled=false;btn.textContent='Sign in / Sign up';
+    });
+}
+
+/* called after login closes the modal */
+var _origClose=closeModal;
+closeModal=function(){
+  var pending=_watchPending;
+  _origClose();
+  if(pending&&getToken())doSave(pending.cve,pending.vendor,pending.btn);
+};
+
+function doSave(cve,vendor,btn){
+  var tok=getToken();
+  if(!tok){openLoginModal(cve,vendor,btn);return;}
+  btn.disabled=true;btn.textContent='Saving…';
+  fetch(API+'/watchlist',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+tok},
+    body:JSON.stringify({cve:cve,vendor:vendor,note:''})})
+    .then(function(r){
+      if(r.status===401){clearToken();btn.disabled=false;btn.textContent='⊕ Watch';openLoginModal(cve,vendor,btn);return;}
+      if(r.status===201||r.status===200){markSaved(btn);watchedCVEs.add(cve);return;}
+      btn.disabled=false;btn.textContent='⊕ Watch';
+    })
+    .catch(function(){btn.disabled=false;btn.textContent='⊕ Watch';});
+}
+
+function onWatchClick(cve,vendor,btn){
+  if(!getToken()){openLoginModal(cve,vendor,btn);return;}
+  doSave(cve,vendor,btn);
+}
+window._onWatch=onWatchClick;
+
+/* load saved CVEs if already logged in */
+loadWatchedCVEs();
+
+/* ---- auth nav button ---- */
+function updateAuthBtn(){
+  var btn=document.getElementById('authNavBtn');
+  if(!btn)return;
+  if(getToken()){btn.textContent='signed in ✓';btn.classList.add('signed-in');}
+  else{btn.textContent='sign in';btn.classList.remove('signed-in');}
+}
+updateAuthBtn();
+document.getElementById('authNavBtn').addEventListener('click',function(){
+  if(getToken()){
+    /* sign out */
+    clearToken();watchedCVEs=new Set();
+    updateAuthBtn();
+    renderTable(); /* remove saved state from buttons */
+  } else {
+    /* open login modal — no pending save, just auth */
+    _watchPending={cve:null,vendor:null,btn:null};
+    document.getElementById('modalEmail').value='';
+    document.getElementById('modalPassword').value='';
+    document.getElementById('modalErr').textContent='';
+    document.getElementById('wlModal').classList.add('open');
+    setTimeout(function(){document.getElementById('modalEmail').focus();},80);
+  }
+});
+
+/* patch closeModal to also update auth button */
+(function(){
+  var _prev=closeModal;
+  closeModal=function(){
+    var pending=_watchPending;
+    /* call original close logic */
+    document.getElementById('wlModal').classList.remove('open');
+    _watchPending=null;
+    updateAuthBtn();
+    if(pending&&pending.cve&&getToken())doSave(pending.cve,pending.vendor,pending.btn);
+    else if(getToken())loadWatchedCVEs();
+  };
+})();
+
+/* ---- contact / query section ---- */
+document.getElementById('contactSubmit').addEventListener('click',function(){
+  var name=document.getElementById('cName').value.trim();
+  var email=document.getElementById('cEmail').value.trim();
+  var msg=document.getElementById('cMsg').value.trim();
+  if(!msg){document.getElementById('cMsg').focus();return;}
+  /* build mailto link as fallback (no separate backend endpoint needed) */
+  var subject=encodeURIComponent('IEW Dashboard Query'+(name?' from '+name:''));
+  var body=encodeURIComponent((name?'Name: '+name+'\n':'')+(email?'Email: '+email+'\n\n':'\n')+msg);
+  window.open('mailto:gcollab749@gmail.com?subject='+subject+'&body='+body,'_blank');
+  var ok=document.getElementById('contactOk');
+  ok.style.opacity=1;setTimeout(function(){ok.style.opacity=0;},2800);
+});
+
+document.getElementById('copyEmail').addEventListener('click',function(){
+  var addr='gcollab749@gmail.com';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(addr).then(function(){
+      document.getElementById('copyEmail').textContent='copied!';
+      setTimeout(function(){document.getElementById('copyEmail').textContent='copy';},2000);
+    }).catch(function(){});
+  }
+});
 </script>
