@@ -1,0 +1,32 @@
+{
+  "name": "watchlist-api",
+  "version": "1.0.0",
+  "description": "Minimal, secure Express backend for a CVE watchlist (security dashboard demo).",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "express",
+    "jwt",
+    "sqlite",
+    "security",
+    "cve",
+    "watchlist"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
