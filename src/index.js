@@ -5,14 +5,19 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 
-const authRoutes = require('./routes/authRoutes');
-const watchlistRoutes = require('./routes/watchlistRoutes');
-
-// Fail fast if the signing secret is missing — tokens are worthless without it.
+// Fail fast on missing required config, before requiring modules that use it.
 if (!process.env.JWT_SECRET) {
   console.error('Fatal: JWT_SECRET is not set. Copy .env.example to .env and set it.');
   process.exit(1);
 }
+if (!process.env.TURSO_DATABASE_URL) {
+  console.error('Fatal: TURSO_DATABASE_URL is not set. Copy .env.example to .env and set it.');
+  process.exit(1);
+}
+
+const { init } = require('./db');
+const authRoutes = require('./routes/authRoutes');
+const watchlistRoutes = require('./routes/watchlistRoutes');
 
 const app = express();
 
@@ -50,9 +55,16 @@ const PORT = process.env.PORT || 3000;
 
 // Only start listening when run directly (keeps the app importable for tests).
 if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`watchlist-api listening on port ${PORT}`);
-  });
+  init()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.log(`watchlist-api listening on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('Failed to initialize database:', err);
+      process.exit(1);
+    });
 }
 
 module.exports = app;

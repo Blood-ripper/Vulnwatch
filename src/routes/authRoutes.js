@@ -4,7 +4,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 
-const db = require('../db');
+const { db } = require('../db');
 const { signToken } = require('../auth');
 
 const router = express.Router();
@@ -23,13 +23,18 @@ const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts. Try again in 15 minutes.' },
 });
 
-// Prepared statements (parametrized — no string concatenation of SQL).
-const insertUser = db.prepare(
-  'INSERT INTO users (email, password_hash) VALUES (?, ?)'
-);
-const findUserByEmail = db.prepare(
-  'SELECT id, email, password_hash FROM users WHERE email = ?'
-);
+// SQL statements — parametrized with positional `?` placeholders (no string
+// concatenation). Turso/libSQL uses the same SQL syntax as SQLite.
+const INSERT_USER = 'INSERT INTO users (email, password_hash) VALUES (?, ?)';
+const FIND_USER_BY_EMAIL = 'SELECT id, email, password_hash FROM users WHERE email = ?';
+
+function isUniqueViolation(err) {
+  return (
+    err &&
+    (err.code === 'SQLITE_CONSTRAINT_UNIQUE' ||
+      /UNIQUE constraint failed/i.test(err.message || ''))
+  );
+}
 
 function validateCredentials(body) {
   const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
@@ -56,15 +61,15 @@ router.post('/signup', async (req, res, next) => {
 
     let result;
     try {
-      result = insertUser.run(email, passwordHash);
+      result = await db.execute({ sql: INSERT_USER, args: [email, passwordHash] });
     } catch (err) {
-      if (err.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      if (isUniqueViolation(err)) {
         return res.status(409).json({ error: 'Email is already registered' });
       }
       throw err;
     }
 
-    const token = signToken(result.lastInsertRowid);
+    const token = signToken(Number(result.lastInsertRowid));
     return res.status(201).json({ token });
   } catch (err) {
     return next(err);
@@ -79,7 +84,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       return res.status(400).json({ error });
     }
 
-    const user = findUserByEmail.get(email);
+    const result = await db.execute({ sql: FIND_USER_BY_EMAIL, args: [email] });
+    const user = result.rows[0];
 
     // Always run a bcrypt comparison to keep timing uniform whether or not
     // the user exists, then return the same generic error for any failure.
@@ -90,7 +96,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = signToken(user.id);
+    const token = signToken(Number(user.id));
     return res.json({ token });
   } catch (err) {
     return next(err);

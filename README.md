@@ -5,7 +5,7 @@ sign up, log in, and manage a personal watchlist of CVEs. It's a
 portfolio/demo project that shows a handful of secure-coding practices:
 
 - **Password hashing** with bcrypt (cost factor 12)
-- **Parametrized SQL queries** (no string concatenation — prepared statements only)
+- **Parametrized SQL queries** (no string concatenation — bound `?` parameters only)
 - **JWT auth** with a secret from the environment and a 7-day expiry
 - **Rate limiting** on the login route (5 attempts / 15 min / IP) to blunt brute force
 - **CORS** locked to a configurable frontend origin
@@ -16,7 +16,7 @@ It is intentionally small and not hardened for production.
 ## Tech stack
 
 - [Express](https://expressjs.com/) — HTTP routing
-- [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) — embedded SQLite
+- [@libsql/client](https://github.com/tursodatabase/libsql-client-ts) — SQLite-compatible [Turso](https://turso.tech) database
 - [bcrypt](https://github.com/kelektiv/node.bcrypt.js) — password hashing
 - [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) — JWTs
 - [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) — rate limiting
@@ -32,8 +32,8 @@ npm install
 
 # 2. Create your env file and fill in values
 cp .env.example .env
-#    then edit .env — at minimum set a strong JWT_SECRET:
-#    openssl rand -hex 32
+#    then edit .env — set a strong JWT_SECRET and your Turso connection:
+#    openssl rand -hex 32   # handy for JWT_SECRET
 
 # 3. Start the server
 npm start
@@ -41,19 +41,56 @@ npm start
 npm run dev
 ```
 
-The server listens on `PORT` (default `3000`). The SQLite database and its
-tables are created automatically on first run.
+The server listens on `PORT` (default `3000`). The database tables are created
+automatically on first run.
+
+### Create a free Turso database
+
+This app stores data in [Turso](https://turso.tech), a hosted SQLite-compatible
+database with a free tier (**no credit card required**).
+
+1. Sign up at [turso.tech](https://turso.tech).
+2. Install the Turso CLI and log in:
+   ```bash
+   curl -sSfL https://get.tur.so/install.sh | bash
+   turso auth login
+   ```
+3. Create a database and read its connection URL:
+   ```bash
+   turso db create watchlist
+   turso db show watchlist --url      # -> TURSO_DATABASE_URL (libsql://...)
+   ```
+4. Mint an auth token for it:
+   ```bash
+   turso db tokens create watchlist   # -> TURSO_AUTH_TOKEN
+   ```
+5. Paste both values into your `.env` (`TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`).
+
+> You can also create the database and generate a token from the Turso web
+> dashboard — the URL is shown on the database page and tokens are created
+> under its **Tokens** / settings section.
+
+**Local development without Turso:** point `TURSO_DATABASE_URL` at a local file
+instead and leave `TURSO_AUTH_TOKEN` blank:
+
+```bash
+TURSO_DATABASE_URL=file:local.db
+TURSO_AUTH_TOKEN=
+```
 
 ## Environment variables
 
-| Variable          | Required | Default                   | Description                                          |
-| ----------------- | -------- | ------------------------- | ---------------------------------------------------- |
-| `JWT_SECRET`      | yes      | —                         | Secret used to sign/verify JWTs. Use a long random string. |
-| `PORT`            | no       | `3000`                    | Port the HTTP server listens on.                     |
-| `FRONTEND_ORIGIN` | no       | `http://localhost:5173`   | Origin allowed to make CORS requests.                |
-| `DATABASE_PATH`   | no       | `./data/watchlist.db`     | Path to the SQLite database file.                    |
+| Variable             | Required | Default                 | Description                                                      |
+| -------------------- | -------- | ----------------------- | ---------------------------------------------------------------- |
+| `JWT_SECRET`         | yes      | —                       | Secret used to sign/verify JWTs. Use a long random string.       |
+| `TURSO_DATABASE_URL` | yes      | —                       | Turso/libSQL connection URL (`libsql://...`), or `file:local.db` for local dev. |
+| `TURSO_AUTH_TOKEN`   | no\*     | —                       | Auth token for the Turso database. Required for `libsql://` URLs; leave blank for `file:` URLs. |
+| `PORT`               | no       | `3000`                  | Port the HTTP server listens on.                                 |
+| `FRONTEND_ORIGIN`    | no       | `http://localhost:5173` | Origin allowed to make CORS requests.                            |
 
-The server refuses to start if `JWT_SECRET` is not set.
+\* Required in practice for a hosted Turso database.
+
+The server refuses to start if `JWT_SECRET` or `TURSO_DATABASE_URL` is not set.
 
 ## Data model
 
@@ -165,7 +202,7 @@ Responses: `204` deleted · `400` invalid id · `401` missing/invalid token · `
 - Passwords are never stored or logged in plaintext — only bcrypt hashes.
 - Login uses a constant-shape bcrypt comparison and a single generic error
   message so responses don't reveal whether an email is registered.
-- All SQL runs through prepared statements with bound parameters, so user
+- All SQL runs through parametrized statements with bound parameters, so user
   input is never concatenated into query text.
 - Watchlist reads, writes, and deletes are always scoped to the authenticated
   `user_id`, so one user cannot see or remove another user's entries.
@@ -176,7 +213,7 @@ Responses: `204` deleted · `400` invalid id · `401` missing/invalid token · `
 ```
 src/
   index.js                 # app setup: env, CORS, JSON, routes, error handling
-  db.js                    # SQLite connection + schema
+  db.js                    # Turso/libSQL client + schema init
   auth.js                  # JWT signing + requireAuth middleware
   routes/
     authRoutes.js          # POST /auth/signup, POST /auth/login (rate-limited)

@@ -1,40 +1,45 @@
 'use strict';
 
-const path = require('path');
-const fs = require('fs');
-const Database = require('better-sqlite3');
+const { createClient } = require('@libsql/client');
 
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'watchlist.db');
+// Turso / libSQL connection details come from the environment.
+// TURSO_DATABASE_URL may be a remote Turso URL (libsql://...) or a local
+// file URL (file:local.db) for development. TURSO_AUTH_TOKEN is required for
+// remote Turso databases and ignored for local file URLs.
+const url = process.env.TURSO_DATABASE_URL;
+const authToken = process.env.TURSO_AUTH_TOKEN;
 
-// Ensure the directory for the database file exists.
-fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+if (!url) {
+  throw new Error('TURSO_DATABASE_URL is not set. Define it in your .env file.');
+}
 
-const db = new Database(dbPath);
+// Integers are returned as JS numbers by default (intMode: 'number'), which
+// keeps row shapes identical to the previous better-sqlite3 setup.
+const db = createClient({ url, authToken });
 
-// Pragmatic defaults for a small app: WAL for better concurrency,
-// and enforce foreign-key constraints (off by default in SQLite).
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+// Create the schema if it doesn't exist. Turso uses the same SQL syntax as
+// SQLite, so these statements are unchanged from the better-sqlite3 version.
+async function init() {
+  await db.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      email         TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at    TEXT NOT NULL DEFAULT (datetime('now'))
+    );
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    email         TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at    TEXT NOT NULL DEFAULT (datetime('now'))
-  );
+    CREATE TABLE IF NOT EXISTS watchlist (
+      id       INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id  INTEGER NOT NULL,
+      cve      TEXT NOT NULL,
+      vendor   TEXT,
+      note     TEXT,
+      added_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
 
-  CREATE TABLE IF NOT EXISTS watchlist (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id  INTEGER NOT NULL,
-    cve      TEXT NOT NULL,
-    vendor   TEXT,
-    note     TEXT,
-    added_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-  );
+    CREATE INDEX IF NOT EXISTS idx_watchlist_user_id ON watchlist(user_id);
+  `);
+}
 
-  CREATE INDEX IF NOT EXISTS idx_watchlist_user_id ON watchlist(user_id);
-`);
-
-module.exports = db;
+module.exports = { db, init };
