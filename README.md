@@ -1,225 +1,151 @@
-# watchlist-api
+# India Exploit Window
 
-A minimal, readable Node.js + Express backend for a security dashboard. Users
-sign up, log in, and manage a personal watchlist of CVEs. It's a
-portfolio/demo project that shows a handful of secure-coding practices:
+> **How fast does India's national CERT warn about vulnerabilities already confirmed under active attack?**
 
-- **Password hashing** with bcrypt (cost factor 12)
-- **Parametrized SQL queries** (no string concatenation — bound `?` parameters only)
-- **JWT auth** with a secret from the environment and a 7-day expiry
-- **Rate limiting** on the login route (5 attempts / 15 min / IP) to blunt brute force
-- **CORS** locked to a configurable frontend origin
-- **Secrets from `.env`** (via dotenv), with `.env` kept out of git
+A security research tool that measures the lag between CISA's Known Exploited Vulnerabilities (KEV) catalog and CERT-In's vulnerability advisories — vendor by vendor, year by year.
 
-It is intentionally small and not hardened for production.
+🔴 **Live dashboard →** [vulnwatch-olive.vercel.app](https://vulnwatch-olive.vercel.app)
 
-## Tech stack
+---
 
-- [Express](https://expressjs.com/) — HTTP routing
-- [@libsql/client](https://github.com/tursodatabase/libsql-client-ts) — SQLite-compatible [Turso](https://turso.tech) database
-- [bcrypt](https://github.com/kelektiv/node.bcrypt.js) — password hashing
-- [jsonwebtoken](https://github.com/auth0/node-jsonwebtoken) — JWTs
-- [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) — rate limiting
-- [cors](https://github.com/expressjs/cors) / [dotenv](https://github.com/motdotla/dotenv)
+## The Finding (2026 run)
 
-## Setup
+| Metric | Result |
+|--------|--------|
+| CERT-In notes collected | 487 |
+| Unique CVEs referenced | 3,536 |
+| CVEs also in CISA KEV | **123** |
+| Median warning lag | **+1 day** |
+| Warned *before* CISA | 28% |
+| Warned 7+ days *after* CISA | 19% |
 
-Requires Node.js 18+.
+**Vendors with longest median lag (min 3 CVEs):**
+
+| Vendor | CVEs | Median lag |
+|--------|------|-----------|
+| Apple | 5 | +14 days |
+| Synacor | 3 | +11 days |
+| Check Point | 4 | +4 days |
+| SonicWall | 4 | +4 days |
+| Ivanti | 5 | +3 days |
+| Google | 7 | +3 days |
+| Microsoft | 7 | +1 day |
+| Cisco | 13 | +1 day |
+
+**Takeaway:** CERT-In is fast *on average* — it sometimes beats CISA. The tail risk is in Apple and niche vendors where warnings arrive up to two weeks late.
+
+---
+
+## What It Measures
+
+```
+lag_days = CERT-In advisory date − CISA KEV dateAdded
+```
+
+- **Negative** → CERT-In warned India *before* CISA confirmed active exploitation
+- **Zero / small positive** → roughly in sync
+- **Large positive** → the window during which Indian networks had no official warning
+
+---
+
+## Architecture
+
+```
+┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  india_exploit_     │────▶│  data/joined.csv  │────▶│  Vercel         │
+│  window.py          │     │  (local output)   │     │  Dashboard      │
+│  (data pipeline)    │     └──────────────────┘     │  (static HTML)  │
+└─────────────────────┘                               └─────────────────┘
+         │                                                     │
+         ▼                                                     ▼
+┌─────────────────────┐                           ┌─────────────────────┐
+│  CERT-In notes      │                           │  Render             │
+│  cert-in.org.in     │                           │  Watchlist API      │
+└─────────────────────┘                           │  (Node.js/Express)  │
+┌─────────────────────┐                           └─────────────────────┘
+│  CISA KEV catalog   │                                     │
+│  cisa.gov           │                           ┌─────────────────────┐
+└─────────────────────┘                           │  Turso DB           │
+                                                  │  (SQLite, Mumbai)   │
+                                                  └─────────────────────┘
+```
+
+**Stack:**
+- **Pipeline:** Python 3 · `requests` · `beautifulsoup4`
+- **Dashboard:** Vanilla JS · [Motion.one](https://motion.dev) · dark-first CSS (no framework)
+- **API backend:** Node.js · Express · JWT auth · libSQL (Turso)
+- **Hosting:** Vercel (dashboard) · Render (API) · Turso Mumbai (DB)
+
+---
+
+## Run It Yourself
+
+### 1. Collect data
 
 ```bash
-# 1. Install dependencies
+pip install requests beautifulsoup4
+python india_exploit_window.py --years 2026
+```
+
+Outputs to `data/`:
+- `certin_notes.csv` — every CERT-In note with its CVEs and publish date
+- `kev.csv` — CISA KEV catalog snapshot
+- `joined.csv` — CVEs present in both, with `lag_days`
+
+Requests are cached in `data/cache/` — reruns don't hit CERT-In again.
+
+### 2. View in the dashboard
+
+Open [vulnwatch-olive.vercel.app](https://vulnwatch-olive.vercel.app) and click **↑ Load joined.csv** to recompute everything from your own run. All analysis runs locally in your browser — nothing is uploaded.
+
+### 3. Run the API locally (optional)
+
+```bash
+cd src
 npm install
-
-# 2. Create your env file and fill in values
-cp .env.example .env
-#    then edit .env — set a strong JWT_SECRET and your Turso connection:
-#    openssl rand -hex 32   # handy for JWT_SECRET
-
-# 3. Start the server
-npm start
-#    or, with auto-reload during development:
-npm run dev
+cp .env.example .env   # add TURSO_URL, TURSO_AUTH_TOKEN, JWT_SECRET
+node index.js
 ```
 
-The server listens on `PORT` (default `3000`). The database tables are created
-automatically on first run.
+---
 
-### Create a free Turso database
-
-This app stores data in [Turso](https://turso.tech), a hosted SQLite-compatible
-database with a free tier (**no credit card required**).
-
-1. Sign up at [turso.tech](https://turso.tech).
-2. Install the Turso CLI and log in:
-   ```bash
-   curl -sSfL https://get.tur.so/install.sh | bash
-   turso auth login
-   ```
-3. Create a database and read its connection URL:
-   ```bash
-   turso db create watchlist
-   turso db show watchlist --url      # -> TURSO_DATABASE_URL (libsql://...)
-   ```
-4. Mint an auth token for it:
-   ```bash
-   turso db tokens create watchlist   # -> TURSO_AUTH_TOKEN
-   ```
-5. Paste both values into your `.env` (`TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`).
-
-> You can also create the database and generate a token from the Turso web
-> dashboard — the URL is shown on the database page and tokens are created
-> under its **Tokens** / settings section.
-
-**Local development without Turso:** point `TURSO_DATABASE_URL` at a local file
-instead and leave `TURSO_AUTH_TOKEN` blank:
-
-```bash
-TURSO_DATABASE_URL=file:local.db
-TURSO_AUTH_TOKEN=
-```
-
-## Environment variables
-
-| Variable             | Required | Default                 | Description                                                      |
-| -------------------- | -------- | ----------------------- | ---------------------------------------------------------------- |
-| `JWT_SECRET`         | yes      | —                       | Secret used to sign/verify JWTs. Use a long random string.       |
-| `TURSO_DATABASE_URL` | yes      | —                       | Turso/libSQL connection URL (`libsql://...`), or `file:local.db` for local dev. |
-| `TURSO_AUTH_TOKEN`   | no\*     | —                       | Auth token for the Turso database. Required for `libsql://` URLs; leave blank for `file:` URLs. |
-| `PORT`               | no       | `3000`                  | Port the HTTP server listens on.                                 |
-| `FRONTEND_ORIGIN`    | no       | `http://localhost:5173` | Origin allowed to make CORS requests.                            |
-
-\* Required in practice for a hosted Turso database.
-
-The server refuses to start if `JWT_SECRET` or `TURSO_DATABASE_URL` is not set.
-
-## Data model
-
-**users**
-
-| column          | type    | notes                     |
-| --------------- | ------- | ------------------------- |
-| `id`            | INTEGER | primary key               |
-| `email`         | TEXT    | unique                    |
-| `password_hash` | TEXT    | bcrypt hash               |
-| `created_at`    | TEXT    | set automatically         |
-
-**watchlist**
-
-| column     | type    | notes                                        |
-| ---------- | ------- | -------------------------------------------- |
-| `id`       | INTEGER | primary key                                  |
-| `user_id`  | INTEGER | foreign key → `users.id` (cascade on delete) |
-| `cve`      | TEXT    | e.g. `CVE-2024-3094`                         |
-| `vendor`   | TEXT    | optional                                     |
-| `note`     | TEXT    | optional                                     |
-| `added_at` | TEXT    | set automatically                            |
-
-## Authentication
-
-Protected routes require an `Authorization: Bearer <token>` header. Tokens are
-obtained from `/auth/signup` or `/auth/login` and are valid for 7 days.
-
-## Endpoints
-
-### `GET /health`
-
-Liveness check.
-
-```bash
-curl http://localhost:3000/health
-# {"status":"ok"}
-```
-
-### `POST /auth/signup`
-
-Create an account. Returns a JWT. Email must be valid; password must be at
-least 8 characters.
-
-```bash
-curl -X POST http://localhost:3000/auth/signup \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"analyst@example.com","password":"correct horse battery"}'
-# {"token":"eyJhbGciOi..."}
-```
-
-Responses: `201` with `{ token }` · `400` invalid input · `409` email already registered.
-
-### `POST /auth/login`
-
-Verify credentials and return a JWT. **Rate limited to 5 attempts per 15
-minutes per IP.**
-
-```bash
-curl -X POST http://localhost:3000/auth/login \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"analyst@example.com","password":"correct horse battery"}'
-# {"token":"eyJhbGciOi..."}
-```
-
-Responses: `200` with `{ token }` · `400` invalid input · `401` wrong credentials · `429` too many attempts.
-
-### `GET /watchlist` _(protected)_
-
-Return the logged-in user's saved CVEs, newest first.
-
-```bash
-TOKEN='paste-your-jwt-here'
-
-curl http://localhost:3000/watchlist \
-  -H "Authorization: Bearer $TOKEN"
-# {"items":[{"id":1,"cve":"CVE-2024-3094","vendor":"xz","note":"backdoor","added_at":"..."}]}
-```
-
-### `POST /watchlist` _(protected)_
-
-Add a CVE to the logged-in user's watchlist. Only `cve` is required.
-
-```bash
-curl -X POST http://localhost:3000/watchlist \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"cve":"CVE-2024-3094","vendor":"xz","note":"supply-chain backdoor"}'
-# {"item":{"id":1,"cve":"CVE-2024-3094","vendor":"xz","note":"supply-chain backdoor","added_at":"..."}}
-```
-
-Responses: `201` with `{ item }` · `400` missing `cve` · `401` missing/invalid token.
-
-### `DELETE /watchlist/:id` _(protected)_
-
-Delete one of the logged-in user's watchlist entries. Entries that belong to
-another user (or don't exist) return `404`.
-
-```bash
-curl -X DELETE http://localhost:3000/watchlist/1 \
-  -H "Authorization: Bearer $TOKEN"
-# 204 No Content
-```
-
-Responses: `204` deleted · `400` invalid id · `401` missing/invalid token · `404` not found.
-
-## Security notes
-
-- Passwords are never stored or logged in plaintext — only bcrypt hashes.
-- Login uses a constant-shape bcrypt comparison and a single generic error
-  message so responses don't reveal whether an email is registered.
-- All SQL runs through parametrized statements with bound parameters, so user
-  input is never concatenated into query text.
-- Watchlist reads, writes, and deletes are always scoped to the authenticated
-  `user_id`, so one user cannot see or remove another user's entries.
-- `.env` is gitignored; only `.env.example` (placeholders) is committed.
-
-## Project structure
+## Project Structure
 
 ```
-src/
-  index.js                 # app setup: env, CORS, JSON, routes, error handling
-  db.js                    # Turso/libSQL client + schema init
-  auth.js                  # JWT signing + requireAuth middleware
-  routes/
-    authRoutes.js          # POST /auth/signup, POST /auth/login (rate-limited)
-    watchlistRoutes.js     # GET/POST /watchlist, DELETE /watchlist/:id
+Vulnwatch/
+├── india_exploit_window.py   # data pipeline
+├── index.html                # dashboard (deployed to Vercel)
+├── src/
+│   └── index.js              # Express API (deployed to Render)
+├── data/                     # pipeline outputs (gitignored)
+│   ├── certin_notes.csv
+│   ├── kev.csv
+│   └── joined.csv
+└── README.md
 ```
 
-## License
+---
 
-MIT
+## Methodology & Honest Caveats
+
+- CERT-In's first mention of each CVE is used (they sometimes revisit a CVE in a later note).
+- The matched set is small relative to total KEV size — 123 of ~1,200+ KEV entries appeared in 2026 CERT-In notes. Many KEV entries pre-date 2026 or cover products CERT-In doesn't track.
+- Per-vendor medians rest on 3–13 CVEs each — directional, not statistically strong. Running 2023–2024 widens the base.
+- "Before CISA" doesn't necessarily mean CERT-In was faster — CERT-In may have covered the CVE in a batch note covering older issues.
+
+---
+
+## Why This Matters for a SOC Analyst
+
+During the lag window, analysts relying solely on CERT-In advisories have no official signal that a CVE is under active exploitation. This project quantifies that blind spot — and shows which vendors' patches deserve proactive monitoring beyond official channels.
+
+---
+
+## Data Sources
+
+- [CERT-In Vulnerability Notes](https://www.cert-in.org.in/s2cMainServlet?pageid=VLNLIST)
+- [CISA Known Exploited Vulnerabilities Catalog](https://www.cisa.gov/known-exploited-vulnerabilities-catalog)
+
+---
+
+*Built as a student security research project for placement portfolio · 2026*
